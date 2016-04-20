@@ -1,0 +1,25 @@
+{
+  "name": "npm_test",
+  "version": "1.0.0",
+  "description": "테스트모듈",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "kwoun",
+  "engines": {
+    "node": ">= 0.4.0"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
+  "dependencies": {
+    "mysql": "^2.10.2",
+    "mongodb": "^2.0.51",
+    "mongoose": "^3.8.37",
+    "sqlite3": "^3.1.1"
+  }
+}
