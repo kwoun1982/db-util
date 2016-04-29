@@ -85,12 +85,101 @@
         }
     };
 
+    var sqlite_conf = {};
+    var sqlite = {
+        config: function (server) {
+            sqlite_conf.server = server;
+        },
+        createConnection: function () {
+            if (sqlite_conf.conn == null) {
+                sqlite_conf.conn = require('sqlite3').verbose();
+            }
+            return sqlite_conf.conn;
+        },
+        send: function (query, callback) {
+            // log.debug("[kky] :: ++++++++++++++++++++++++++++++++++++");
+            // log.debug("[kky] :: sqlite.send(query, callback)");
+            // log.debug("[kky] :: ++++++++++++++++++++++++++++++++++++");
+
+            if (!sqlite_conf.server) {
+                throw Error("server info not found!");
+            }
+
+            var conn = this.createConnection();
+            var db = new conn.Database(sqlite_conf.server);
+            db.serialize(function () {
+                if (Array.isArray(query.param) && Array.isArray(query.param[0])) {
+                    db.run("BEGIN TRANSACTION");
+                    var stmt = db.prepare(query.sql);
+                    var queryCnt = 1;
+                    for (var i = 0; i < query.param.length; i++) {
+                        stmt.run(query.param[i], function (err, row) {
+                            queryCnt++;
+
+                            if (err) {
+                                db.run("ROLLBACK");
+                                if (callback) {
+                                    db.close(function () {
+                                        if (callback) {
+                                            callback(err, {result: 0});
+                                        }
+                                    });
+                                    return;
+                                }
+                            }
+                            if (queryCnt == query.param.length) {
+
+                                if (callback) {
+                                    db.close(function () {
+                                        if (callback) {
+                                            callback(err, {result: query.param.length});
+                                        }
+                                    });
+                                    return;
+                                }
+                            }
+                        });
+                    }
+                    stmt.finalize();
+                    db.run("END TRANSACTION");
+                } else {
+                    db.all(query.sql, query.param, function (err, row) {
+                        if (err) {
+                            console.error(err);
+                            row = {result: 0};
+
+                        } else {
+                            if (query.sql.toUpperCase().indexOf("SELECT") > -1) {
+                            } else {
+                                // update, insert, delete
+                                if (typeof  row != "array") {
+                                    row = [];
+                                }
+                                row = {result: 1};
+                            }
+                        }
+                        db.close(function () {
+                            if (callback) {
+                                callback(err, row);
+                            }
+                        });
+
+
+                    });
+                }
+            });
+        }
+    };
+
     if (typeof module === 'object' && module.exports) {
-        module.exports = mysql;
+        module.exports = {
+            mysql: mysql,
+            sqlite: sqlite
+        };
     }
 }());
 
 function replaceAll(replaceThis, withThis, inThis) {
     withThis = withThis.replace(/\$/g, "$$$$");
     return inThis.replace(new RegExp(replaceThis.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|<>\-\&])/g, "\\$&"), "g"), withThis);
-};
+}

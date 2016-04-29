@@ -1,12 +1,12 @@
 {
-  "name": "npm_test",
+  "name": "db-util",
   "version": "1.0.0",
   "description": "테스트모듈",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "kwoun",
+  "author": "kwoun, kiyoung",
   "engines": {
     "node": ">= 0.4.0"
   },
