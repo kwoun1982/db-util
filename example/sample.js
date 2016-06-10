@@ -1,80 +1,56 @@
 var DB = require("../index.js");
 DB.sqlite.config("./example/sqlite");
-var test = 2;
+var test = "mysql";
 
 var querys = [
     {
-        sql: "DROP TABLE USER"
+        sql: "DROP TABLE TEST"
     },
     {
-        sql: "CREATE TABLE USER (USER_ID TEXT, USER_PW TEXT)"
+        sql: "CREATE TABLE TEST  (TEST_ID TEXT, TEST_PW TEXT)"
     },
     {
-        sql: "INSERT INTO USER (USER_ID, USER_PW) VALUES (?,?)",
-        param: [["test", "pass"], ["test", "pass"]]
+        sql: "INSERT INTO TEST (TEST_ID, TEST_PW) VALUES ?",
+        param: [
+            ["TTT1", "PW1"],
+            ["TTT2", "PW2"],
+            ["TTT3", "PW3"],
+            ["TTT4", "PW4"],
+            ["TTT5", "PW5"]
+        ]
     },
     {
-        sql: "INSERT INTO USER (USER_ID, USER_PW) VALUES (?,?)",
-        param: ["test", "pass"]
+        sql: "INSERT INTO TEST (TEST_ID, TEST_PW) VALUES ?",
+        param: [["test", "test"]]
     },
     {
-        sql: "INSERT INTO USER (USER_ID, USER_PW) VALUES (?,?)",
-        param: [["test", "pass"], ["test", "pass"]]
+        sql: "UPDATE TEST SET ? WHERE TEST_ID=?",
+        param: [{TEST_PW: "P33W5"}, "TTT1"]
     },
     {
-        sql: "INSERT INTO USER (USER_ID, USER_PW) VALUES (?,?)",
-        param: [["test", "pass"], ["test", "pass"]]
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
-    },
-    {
-        sql: "SELECT * FROM USER ",
-        param: {}
+        sql: "SELECT * FROM TEST WHERE TEST_ID =?",
+        param: [["TTT1"]]
     }
 ];
 
 
-if (test == 1) {
-    DB.sqlite.sends(querys, function (err, result) {
+if (test == "mysql") {
+    DB.mysql.send(querys, function (err, result) {
+        console.log("err : ");
+        console.log(JSON.stringify(err, "", ""));
+        console.log("result : ");
+        console.log(JSON.stringify(result, "", ""));
+    });
+
+
+} else if (test == "sqlite") {
+    DB.sqlite.multiSend(querys, function (err, result) {
         console.log("err : " + err);
         console.log("result : ");
         console.log(result);
     });
-} else {
+}
+else {
     var query = {
         sql: "DROP TABLE USER"
     };
@@ -103,7 +79,7 @@ if (test == 1) {
             console.log("=================================");
             query = {
                 sql: "INSERT INTO USER (USER_ID, USER_PW) VALUES (?,?)",
-                param: [["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"],["test", "pass"], ["test", "pass"], ["test", "pass"]]
+                param: [["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"], ["test", "pass"]]
             };
             DB.sqlite.send(query, function (err, result) {
 

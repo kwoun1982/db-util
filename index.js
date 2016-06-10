@@ -7,28 +7,27 @@
  */
 (function () {
     // ##################################################
-    // MySql DB 설정
+    // MySql 
     // ##################################################
-    var conn = null;
+    var mysql_conf = {
+        "host": "192.168.0.161",
+        "port": 3306,
+        "user": "kky",
+        "password": "kky",
+        "database": "iot"
+    };
     var mysql = {
-        createConnection: function () {
-            if (conn == null) {
-                conn = require('mysql').createConnection(require('./config.json').mysql);
-            }
-            return conn;
+        config: function (server) {
         },
-        /*
-         * 정상적으로 DB에서 데이터를 가져왔을 때 콜백이 있으면 결과를 넘겨서 수행, 없으면 결과를 리턴.
-         */
+        createConnection: function () {
+            return require('mysql').createConnection(mysql_conf);
+        },
         send: function (query, callback) {
-            //console.log("[kky] :: ++++++++++++++++++++++++++++++++++++");
-            //console.log("[kky] :: mysql.send(query, callback)");
-            //console.log("[kky] :: ++++++++++++++++++++++++++++++++++++");
             var conn = this.createConnection();
             conn.connect(function (err) {
                 if (err) {
-                    console.log(err.stack);
-                    if (callback) {
+                    log.debug(err.stack);
+                    if (typeof callback == "function") {
                         callback(err.message);
                     }
                     return err.stack;
@@ -36,52 +35,50 @@
                 }
             });
 
-            // ===========================================
-            // Sql 출력
-            var printSql = query.sql;
-            if (isClass(query.param, Array)) {
-                for (var i = 0; i < query.param.length; i++) {
-                    var param = query.param[i];
-                    if (typeof query.param[i] == "undefined") {
-                        param = " '' ";
-                    }
-                    printSql = printSql.replace("?", "'" + param + "'");
+            var queryCnt = 0;
+            var rRow = [];
+            var rErr = [];
+
+            function exeQuery(conn, query) {
+                var selectSql = query[queryCnt];
+                if (selectSql.sql.indexOf("INSERT") > -1) {
+                    selectSql.param = [selectSql.param];
                 }
+
+                conn.query(selectSql.sql, selectSql.param, function (err, rows, fields) {
+                    try{
+                        if (selectSql.sql.indexOf("SELECT") == -1) {
+                            rows = {result: rows.affectedRows};
+                        }
+                        if (err) {
+                            console.error(err);
+                        }
+                    }catch (e){
+                        console.error(e);
+                    }
+                    rRow.push(rows);
+                    rErr.push(err);
+                    if (query.length - 1 == queryCnt) {
+                        callback(rErr, rRow);
+                        conn.end(function (err) {
+                            if (err) {
+                                console.error(err.stack);
+                            }
+                        });
+                    } else {
+                        queryCnt = queryCnt + 1;
+                        exeQuery(conn, query);
+                    }
+                });
             }
-            printSql = replaceAll(",", ",\n      ", printSql);
-            printSql = replaceAll("FROM", "\nFROM  ", printSql);
-            printSql = replaceAll("WHERE", "\nWHERE ", printSql);
-            console.log("\n" + printSql);
 
-            // ===========================================
-            // 쿼리문 실행
-            conn.query(query.sql, query.param, function (err, rows, fields) {
-                console.log("Result :: \n" + JSON.stringify(rows));
-                if (err) {
-                    console.log(err.stack);
-                    if (callback) {
-                        callback(err.message);
-                    }
-                } else {
-                    if (callback) {
-                        callback(rows);
-                    }
-                }
-            });
-
-            conn.end(function (err) {
-                if (err) {
-                    console.log(err.stack);
-                    if (callback) {
-                        callback(err.message);
-                    }
-                    return err.stack;
-                } else {
-                }
-            });
+            exeQuery(conn, query);
         }
     };
 
+    // ##################################################
+    // sqlite
+    // ################################################## 
     var sqlite_conf = {};
     var sqlite = {
         config: function (server) {
@@ -92,6 +89,63 @@
                 sqlite_conf.conn = require('sqlite3').verbose();
             }
             return sqlite_conf.conn;
+        },
+        send: function (query, callback) {
+            if (!sqlite_conf.server) {
+                throw Error("server info not found!");
+            }
+            var conn = this.createConnection();
+            var db = new conn.Database(sqlite_conf.server);
+            db.serialize(function () {
+                var methods = Array.isArray(query.param) && Array.isArray(query.param[0]) ? "multiQuery" : "singleQuery";
+                sqlite[methods](db, query, function (err, row) {
+                    db.close(function () {
+                        if (callback) {
+                            callback(err, row);
+                        }
+                    });
+                });
+            });
+        },
+        multiSend: function (querys, callback) {
+            if (!Array.isArray(querys)) {
+                callback({result: 0});
+                return;
+            }
+            var conn = this.createConnection();
+            var db = new conn.Database(sqlite_conf.server);
+            db.serialize(function () {
+                sqlite_conf.multiCnt = null;
+                sqlite.sendSql(db, querys, function (err, rows) {
+                    db.close(function () {
+                        callback(err, rows);
+                    });
+                });
+            });
+        },
+        sendSql: function (db, querys, callback) {
+            if (sqlite_conf.multiCnt == null) {
+                sqlite_conf.multiCnt = 0;
+                sqlite_conf.callback = callback;
+                sqlite_conf.rows = [];
+            }
+            var query = querys[sqlite_conf.multiCnt];
+            var methods = Array.isArray(query.param) && Array.isArray(query.param[0]) ? "multiQuery" : "singleQuery";
+            sqlite[methods](db, query, function (err, row) {
+
+                sqlite_conf.rows.push(row);
+
+                sqlite_conf.multiCnt++;
+                query = querys[sqlite_conf.multiCnt];
+
+                if (sqlite_conf.multiCnt > querys.length - 1) {
+                    if (sqlite_conf.callback) {
+                        sqlite_conf.callback(err, sqlite_conf.rows);
+                    }
+                } else {
+                    sqlite.sendSql(db, querys);
+                }
+            });
         },
         multiQuery: function (db, query, callback) {
             db.run("BEGIN TRANSACTION");
@@ -141,63 +195,6 @@
                     callback(err, row);
                 }
 
-            });
-        },
-        send: function (query, callback) {
-            if (!sqlite_conf.server) {
-                throw Error("server info not found!");
-            }
-            var conn = this.createConnection();
-            var db = new conn.Database(sqlite_conf.server);
-            db.serialize(function () {
-                var methods = Array.isArray(query.param) && Array.isArray(query.param[0]) ? "multiQuery" : "singleQuery";
-                sqlite[methods](db, query, function (err, row) {
-                    db.close(function () {
-                        if (callback) {
-                            callback(err, row);
-                        }
-                    });
-                });
-            });
-        },
-        sends: function (querys, callback) {
-            if (!Array.isArray(querys)) {
-                callback({result: 0});
-                return;
-            }
-            var conn = this.createConnection();
-            var db = new conn.Database(sqlite_conf.server);
-            db.serialize(function () {
-                sqlite_conf.multiCnt = null;
-                sqlite.sendsSql(db, querys, function (err, rows) {
-                    db.close(function () {
-                        callback(err, rows);
-                    });
-                });
-            });
-        },
-        sendsSql: function (db, querys, callback) {
-            if (sqlite_conf.multiCnt == null) {
-                sqlite_conf.multiCnt = 0;
-                sqlite_conf.callback = callback;
-                sqlite_conf.rows = [];
-            }
-            var query = querys[sqlite_conf.multiCnt];
-            var methods = Array.isArray(query.param) && Array.isArray(query.param[0]) ? "multiQuery" : "singleQuery";
-            sqlite[methods](db, query, function (err, row) {
-
-                sqlite_conf.rows.push(row);
-
-                sqlite_conf.multiCnt++;
-                query = querys[sqlite_conf.multiCnt];
-
-                if (sqlite_conf.multiCnt > querys.length - 1) {
-                    if (sqlite_conf.callback) {
-                        sqlite_conf.callback(err, sqlite_conf.rows);
-                    }
-                } else {
-                    sqlite.sendsSql(db, querys);
-                }
             });
         }
     };

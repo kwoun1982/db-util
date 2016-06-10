@@ -1,6 +1,6 @@
 {
   "name": "db-util",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "테스트모듈",
   "main": "index.js",
   "scripts": {
