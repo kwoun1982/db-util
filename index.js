@@ -21,7 +21,7 @@
             var conn = this.createConnection();
             conn.connect(function (err) {
                 if (err) {
-                    log.debug(err.stack);
+                    console.error(err.stack);
                     if (typeof callback == "function") {
                         callback(err.message);
                     }
