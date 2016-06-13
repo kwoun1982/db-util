@@ -9,15 +9,10 @@
     // ##################################################
     // MySql 
     // ##################################################
-    var mysql_conf = {
-        "host": "192.168.0.161",
-        "port": 3306,
-        "user": "kky",
-        "password": "kky",
-        "database": "iot"
-    };
-    var mysql = {
+    var mysql_conf = {};
+    var mysql = { 
         config: function (server) {
+            mysql_conf = server;  
         },
         createConnection: function () {
             return require('mysql').createConnection(mysql_conf);

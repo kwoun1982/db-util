@@ -1,6 +1,13 @@
 var DB = require("../index.js");
 DB.sqlite.config("./example/sqlite");
-var test = "sqlite";
+DB.mysql.config({
+    "host": "192.168.0.161",
+    "port": 3306,
+    "user": "kky",
+    "password": "kky",
+    "database": "iot"
+});
+var test = "mysql"; //sqlite ,mysql
 
 var mysqlQuery = [
     {
@@ -62,7 +69,7 @@ var sqliteQuery = [
     },
     {
         sql: "SELECT * FROM USER WHERE USER_ID =?",
-        param: [["test"]]
+        param: ["test"]
     }
 ];
 
@@ -78,9 +85,10 @@ if (test == "mysql") {
 
 } else if (test == "sqlite") {
     DB.sqlite.sends(sqliteQuery, function (err, result) {
-        console.log("err : " + err);
+        console.log("err : ");
+        console.log(JSON.stringify(err, "", ""));
         console.log("result : ");
-        console.log(result);
+        console.log(JSON.stringify(result, "", ""));
     });
 
     // var query = {
