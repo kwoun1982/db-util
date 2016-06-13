@@ -10,9 +10,9 @@
     // MySql 
     // ##################################################
     var mysql_conf = {};
-    var mysql = { 
+    var mysql = {
         config: function (server) {
-            mysql_conf = server;  
+            mysql_conf = server;
         },
         createConnection: function () {
             return require('mysql').createConnection(mysql_conf);
@@ -42,13 +42,23 @@
 
                 conn.query(selectSql.sql, selectSql.param, function (err, rows, fields) {
                     try {
-                        if (selectSql.sql.indexOf("SELECT") == -1) {
-                            rows = {result: rows.affectedRows};
-                        }
+
                         if (err) {
+                            console.error("====================================");
+                            console.error("db-util :: Query Err ");
+                            console.error("====================================");
+                            console.error(replaceAll("   ", "", selectSql.sql));
                             console.error(err);
+                        } else {
+                            if (selectSql.sql.indexOf("SELECT") == -1) {
+                                rows = {result: rows.affectedRows};
+                            }
                         }
+
                     } catch (e) {
+                        console.error("====================================");
+                        console.error("db-util :: Query Err 2");
+                        console.error("====================================");
                         console.error(e);
                     }
                     rRow.push(rows);
